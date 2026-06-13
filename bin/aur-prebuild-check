@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# aur-prebuild-check — scan an AUR package's build sources for the "Atomic Arch"
+# campaign IOCs BEFORE makepkg runs any of its code. Read-only.
+#   usage: aur-prebuild-check [BUILD_DIR]   (defaults to current directory)
+#   exit 0 = clean (or only generic warnings), 2 = campaign IOC -> block build.
+
+set -uo pipefail
+DIR="${1:-$PWD}"
+IOCS="${XDG_DATA_HOME:-$HOME/.local/share}/aur-atomic/iocs.sh"
+LOG="${XDG_STATE_HOME:-$HOME/.local/state}/aur-atomic-scan/scan.log"
+ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+
+# Fail-open on a missing IOC file: a helper-file problem must not brick the
+# user's ability to build packages. Warn loudly instead.
+if ! . "$IOCS" 2>/dev/null; then
+    echo "aur-prebuild-check: WARNING — IOC file $IOCS missing; skipping scan" >&2
+    exit 0
+fi
+
+# Only the build-defining files; these are what carry the injected payload.
+mapfile -t FILES < <(
+    find "$DIR" -maxdepth 1 -type f \
+        \( -name PKGBUILD -o -name '*.install' -o -name .SRCINFO \) 2>/dev/null)
+[ "${#FILES[@]}" -eq 0 ] && exit 0   # nothing AUR-shaped here; let makepkg run
+
+# Tier 1 — hard block on unambiguous campaign IOCs.
+if BLOCK="$(grep -nEH "$SOURCE_RE" "${FILES[@]}" 2>/dev/null)"; then
+    {
+        echo "[$(ts)] PREBUILD BLOCK in $DIR:"
+        echo "$BLOCK"
+    } | tee -a "$LOG" >&2
+    command -v notify-send >/dev/null 2>&1 \
+        && notify-send -u critical "AUR build blocked" \
+            "Atomic Arch IOC in $(basename "$DIR") — build aborted."
+    exit 2
+fi
+
+# Tier 2 — warn (do not block) on generic injection shapes for eyeballing.
+if WARN="$(grep -nEH "$GENERIC_RE" "${FILES[@]}" 2>/dev/null)"; then
+    {
+        echo "[$(ts)] PREBUILD WARN in $DIR (review before trusting):"
+        echo "$WARN"
+    } | tee -a "$LOG" >&2
+fi
+
+exit 0

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# makepkg (wrapper) — gates AUR builds through aur-prebuild-check, then hands
+# off to the real /usr/bin/makepkg. paru/yay invoke makepkg from the package's
+# build dir AFTER fetching sources but BEFORE running them, so a trojaned
+# PKGBUILD is caught here before any of its code executes.
+#
+# Installed to ~/.local/bin/makepkg, which must precede /usr/bin in PATH.
+# Remove that file to disable; the real makepkg is untouched.
+
+set -uo pipefail
+REAL="/usr/bin/makepkg"
+
+if [ ! -x "$REAL" ]; then
+    echo "makepkg-wrapper: real makepkg not at $REAL; cannot continue" >&2
+    exit 127
+fi
+
+# Scan the current build directory. Block (abort the build) only on a
+# confirmed campaign IOC; warnings and clean scans fall through.
+if command -v aur-prebuild-check >/dev/null 2>&1; then
+    aur-prebuild-check "$PWD"
+    if [ "$?" -eq 2 ]; then
+        echo "makepkg-wrapper: BUILD ABORTED — Atomic Arch IOC detected in" \
+             "$PWD (see scan log). Do NOT build this package." >&2
+        exit 1
+    fi
+fi
+
+exec "$REAL" "$@"

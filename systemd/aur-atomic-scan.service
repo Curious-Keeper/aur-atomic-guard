@@ -1,0 +1,9 @@
+[Unit]
+Description=Read-only IOC scan for Atomic Arch AUR malware
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/aur-atomic-scan.sh
+Nice=10
+# Opt-in auto-expiry: uncomment and set a date to auto-disable the timer.
+# Environment=AUR_ATOMIC_EXPIRE=20260620

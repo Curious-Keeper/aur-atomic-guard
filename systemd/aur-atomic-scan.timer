@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic Atomic Arch AUR malware scan (every 2h)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

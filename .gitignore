@@ -1,0 +1,4 @@
+# Local runtime artifacts — never committed
+package_list.txt
+*.log
+scan.log

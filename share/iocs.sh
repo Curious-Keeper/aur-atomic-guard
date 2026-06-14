@@ -9,10 +9,13 @@ ONION="olrh4mibs62l6kkuvvjyc5lrer"
 ACCOUNTS="herbsobering|krisztinavarga|custodiatover|veramagalhaes|PLYSHKA|fardewoalk"
 
 # Injected-installer signatures (the exact lines added to trojaned PKGBUILDs).
-INSTALLERS="npm install .*atomic-lockfile|bun install .*js-digest"
+# Campaign now also uses `bun add` and pnpm/yarn — match the family broadly.
+INSTALLERS="(npm|bun|pnpm|yarn) (install|add|i) .*(atomic-lockfile|js-digest|lockfile-js|nextfile-js)"
 
-# Malicious package names and on-disk payload path.
-PKGNAMES="atomic-lockfile|js-digest"
+# Malicious package names and on-disk payload path. Names expand as the
+# campaign evolves (aur-general thread DWY3WBOI…): atomic-lockfile, js-digest,
+# lockfile-js, nextfile-js.
+PKGNAMES="atomic-lockfile|js-digest|lockfile-js|nextfile-js"
 PAYLOAD_PATH="src/hooks/deps"
 
 # Payload SHA256s (community IOCs; secondary — may carry transcription noise).

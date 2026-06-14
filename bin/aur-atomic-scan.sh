@@ -42,7 +42,8 @@ fi
 # 1. Malicious npm/bun packages & payload on disk
 while IFS= read -r f; do hit "package/payload artifact: $f"; done < <(
     find "$H" /usr/lib/node_modules /usr/local/lib/node_modules -maxdepth 7 \
-        \( -name atomic-lockfile -o -name js-digest \) 2>/dev/null
+        \( -name atomic-lockfile -o -name js-digest \
+           -o -name lockfile-js -o -name nextfile-js \) 2>/dev/null
     find "$H" /tmp /var/tmp -path '*hooks/deps' 2>/dev/null
 )
 

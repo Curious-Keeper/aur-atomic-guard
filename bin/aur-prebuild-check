@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# aur-prebuild-check — scan an AUR package's build sources for the "Atomic Arch"
-# campaign IOCs BEFORE makepkg runs any of its code. Read-only.
+# aur-prebuild-check — scan an AUR package's build sources for known AUR-campaign
+# IOCs (Atomic Arch infostealer, Chaos RAT, Russian-spam shell-rc injection)
+# BEFORE makepkg runs any of its code. Read-only.
 #   usage: aur-prebuild-check [BUILD_DIR]   (defaults to current directory)
 #   exit 0 = clean (or only generic warnings), 2 = campaign IOC -> block build.
 
@@ -23,15 +24,17 @@ mapfile -t FILES < <(
         \( -name PKGBUILD -o -name '*.install' -o -name .SRCINFO \) 2>/dev/null)
 [ "${#FILES[@]}" -eq 0 ] && exit 0   # nothing AUR-shaped here; let makepkg run
 
-# Tier 1 — hard block on unambiguous campaign IOCs.
-if BLOCK="$(grep -nEH "$SOURCE_RE" "${FILES[@]}" 2>/dev/null)"; then
+# Tier 1 — hard block on unambiguous campaign IOCs. Uses the gate block set
+# (campaign IOCs + the shell-rc-injection shape); falls back to SOURCE_RE if an
+# older iocs.sh without BUILD_BLOCK_RE is sourced.
+if BLOCK="$(grep -nEH "${BUILD_BLOCK_RE:-$SOURCE_RE}" "${FILES[@]}" 2>/dev/null)"; then
     {
         echo "[$(ts)] PREBUILD BLOCK in $DIR:"
         echo "$BLOCK"
     } | tee -a "$LOG" >&2
     command -v notify-send >/dev/null 2>&1 \
         && notify-send -u critical "AUR build blocked" \
-            "Atomic Arch IOC in $(basename "$DIR") — build aborted."
+            "AUR-campaign IOC in $(basename "$DIR") — build aborted."
     exit 2
 fi
 

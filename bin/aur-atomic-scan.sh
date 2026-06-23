@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# aur-atomic-scan.sh — read-only IOC sweep for the "Atomic Arch" AUR
-# supply-chain attack (June 2026). Covers BOTH waves:
-#   wave 1: npm install atomic-lockfile -> src/hooks/deps ELF + eBPF rootkit
-#   wave 2: bun install js-digest       -> embedded ELF (evades npm signature)
-# plus the second-stage Monero cryptominer. Read-only; makes NO changes.
-# Exit 0 = clean, 2 = indicators found.
+# aur-atomic-scan.sh — read-only IOC sweep for known 2026-era AUR campaigns.
+# Read-only; makes NO changes. Exit 0 = clean, 2 = indicators found.
+#   Atomic Arch wave 1: npm install atomic-lockfile -> src/hooks/deps ELF + eBPF
+#   Atomic Arch wave 2: bun install js-digest       -> embedded ELF
+#   plus the second-stage Monero cryptominer,
+#   Chaos RAT (danikpapas fake-"patched-browser" packages), and the
+#   Russian-spam shell-rc injection campaign.
 
 set -uo pipefail
 H="$HOME"
@@ -47,7 +48,9 @@ while IFS= read -r f; do hit "package/payload artifact: $f"; done < <(
     find "$H" /tmp /var/tmp -path '*hooks/deps' 2>/dev/null
 )
 
-# 2. IOC strings in AUR build dirs, bun/npm caches, shell history.
+# 2. IOC strings in AUR build dirs, bun/npm caches, shell history. SOURCE_RE
+#    now also carries the Chaos RAT source IOC (danikpapas/zenbrowser-patch), so
+#    a cached malicious `patches` source is caught here too.
 #    Scoped to where malware actually leaves traces — NOT all of ~/.config,
 #    which produces false positives from editor local-history of these very
 #    scripts. systemd-unit persistence is covered separately by check 4.
@@ -108,6 +111,22 @@ if [ -s "$PKGLIST" ]; then
     done < <(pacman -Qmq 2>/dev/null)
 else
     note "no $PKGLIST present — package-name cross-reference skipped"
+fi
+
+# 10. Russian-spam campaign: Cyrillic spam/profanity injected into the user's
+#     shell rc files at install time (distinct from the JS supply-chain waves).
+#     A clean machine has no Cyrillic here; reported for review rather than as a
+#     confirmed payload. \p{Cyrillic} under C.UTF-8 matches U+0400–U+04FF on both
+#     GNU grep (the systemd-timer grep) and ugrep, with no ASCII false positives.
+if printf 'x\n' | grep -qP 'x' 2>/dev/null; then
+    for rc in "$H/.bashrc" "$H/.zshrc" "$H/.bash_profile" "$H/.zprofile" \
+              "$H/.zshenv" "$H/.profile" "$H/.config/fish/config.fish"; do
+        [ -f "$rc" ] || continue
+        LC_ALL=C.UTF-8 grep -qsP '\p{Cyrillic}' "$rc" 2>/dev/null \
+            && hit "Cyrillic in shell rc (possible AUR spam injection — review): $rc"
+    done
+else
+    note "grep -P unavailable — Russian-spam Cyrillic rc check skipped"
 fi
 
 if [ "$HITS" -gt 0 ]; then

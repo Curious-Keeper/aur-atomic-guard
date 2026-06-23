@@ -7,6 +7,12 @@ atomic-lockfile` (wave 1) or `bun install js-digest` (wave 2) — pulling a Linu
 credential stealer with an optional eBPF rootkit and a second-stage Monero
 cryptominer.
 
+Coverage has since been extended to two further AUR campaigns: the **Chaos RAT**
+packages (fake "patched browser" uploads by `danikpapas` whose `PKGBUILD` pulled
+a malicious `patches` git source from `github.com/danikpapas/*`) and the
+**Russian-spam** wave (~144 packages whose `PKGBUILD`/`.install` appended Cyrillic
+spam/profanity to the user's shell rc files at install time).
+
 This is a small, dependency-free, user-level (no root) toolkit for Arch Linux.
 It does two things:
 
@@ -22,8 +28,11 @@ Both share one IOC definition file (`share/iocs.sh`) so they never drift apart.
 **Pre-build gate** (`aur-prebuild-check`) — two tiers:
 - **Block** (aborts the build) on unambiguous campaign IOCs: the malicious npm/bun
   package names, the `src/hooks/deps` payload path, the onion C2, the attacker
-  accounts (`herbsobering`, `krisztinavarga`, `custodiatover`, `veramagalhaes`,
-  `PLYSHKA`, `fardewoalk`), and the exact injected installer lines.
+  accounts (`herbsobering`, `krisztinavarga`, `custodiatovar`, `veramagalhaes`,
+  `PLYSHKA`, `fardewoak`, `franziskaweber`, `tobiaswesterburg`, `ellenmyklebust`),
+  the exact injected installer lines, the **Chaos RAT** source IOC
+  (`danikpapas`/`zenbrowser-patch`), and the **Russian-spam** shell-rc-injection
+  shape (a build redirecting into `~/.bashrc`/`.zshrc`/fish config).
 - **Warn** (build proceeds) on generic supply-chain shapes (`npm install …`,
   `curl … | sh`, `.onion`, …) so legitimate node-based packages aren't blocked.
 
@@ -36,7 +45,9 @@ Both share one IOC definition file (`share/iocs.sh`) so they never drift apart.
 6. Second-stage Monero miner (unowned `monero-wallet-gui`, `xmrig`/stratum procs)
 7. C2 / exfil / mining egress
 8. Known payload SHA256 matches
-9. Installed packages vs the compromised list (optional, see below)
+9. Installed packages vs the compromised list (optional, see below) — the merged
+   list also covers the Chaos RAT and Russian-spam package names
+10. Cyrillic text injected into the user's shell rc files (Russian-spam campaign)
 
 ## Install
 
